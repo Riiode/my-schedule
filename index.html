@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Rio Schedule" />
+  <meta name="theme-color" content="#0D0D0D" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Rio's Schedule</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0D0D0D;
+      --surface: #161616;
+      --surface2: #1E1E1E;
+      --border: #2A2A2A;
+      --border2: #333;
+      --text: #F0F0F0;
+      --text2: #999;
+      --text3: #555;
+      --accent: #C8FF57;
+      --accent2: #A3D43E;
+      --skill: #3B82F6;
+      --bincom: #8B5CF6;
+      --cashout: #F59E0B;
+      --faith: #10B981;
+      --rest: #6B7280;
+      --habit: #F97316;
+      --read: #EC4899;
+      --social: #06B6D4;
+      --rec: #84CC16;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overscroll-behavior: none; }
+
+    /* LAYOUT */
+    .app { display: flex; flex-direction: column; height: 100dvh; max-width: 480px; margin: 0 auto; position: relative; }
+
+    /* HEADER */
+    .header { padding: 52px 20px 0; flex-shrink: 0; }
+    .header-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+    .app-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .app-title span { color: var(--accent); }
+    .sync-btn { background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
+    .sync-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background 0.3s; }
+    .sync-dot.synced { background: var(--accent); }
+    .sync-dot.syncing { background: var(--cashout); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .date-line { font-size: 13px; color: var(--text3); margin-bottom: 16px; font-weight: 300; }
+
+    /* DAY TABS */
+    .day-tabs { display: flex; gap: 6px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; margin-bottom: 12px; }
+    .day-tabs::-webkit-scrollbar { display: none; }
+    .day-tab { flex-shrink: 0; width: 44px; height: 52px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; gap: 2px; transition: all 0.2s; }
+    .day-tab.active { background: var(--accent); border-color: var(--accent); }
+    .day-tab .day-name { font-size: 10px; font-weight: 500; color: var(--text3); font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; }
+    .day-tab.active .day-name { color: #0D0D0D; }
+    .day-tab .day-num { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text2); }
+    .day-tab.active .day-num { color: #0D0D0D; }
+    .day-tab.today:not(.active) { border-color: var(--accent); }
+    .day-tab.today:not(.active) .day-num { color: var(--accent); }
+
+    /* PROGRESS */
+    .progress-row { padding: 0 20px; margin-bottom: 16px; flex-shrink: 0; }
+    .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .progress-label { font-size: 12px; color: var(--text3); }
+    .progress-pct { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--accent); }
+    .progress-track { height: 3px; background: var(--surface2); border-radius: 99px; }
+    .progress-fill { height: 3px; border-radius: 99px; background: var(--accent); transition: width 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+
+    /* NOTICE */
+    .day-notice { margin: 0 20px 12px; padding: 8px 12px; border-radius: 10px; font-size: 12px; background: #1A1A2E; border: 1px solid #8B5CF644; color: #A78BFA; display: none; }
+
+    /* SCHEDULE SCROLL */
+    .schedule-scroll { flex: 1; overflow-y: auto; padding: 0 20px 100px; scrollbar-width: none; }
+    .schedule-scroll::-webkit-scrollbar { display: none; }
+
+    /* SECTION */
+    .section-label { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin: 20px 0 8px; }
+
+    /* BLOCK */
+    .block { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); margin-bottom: 8px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+    .block::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 99px 0 0 99px; }
+    .block.tag-skill::before { background: var(--skill); }
+    .block.tag-bincom::before { background: var(--bincom); }
+    .block.tag-cashout::before { background: var(--cashout); }
+    .block.tag-faith::before { background: var(--faith); }
+    .block.tag-rest::before { background: var(--rest); }
+    .block.tag-habit::before { background: var(--habit); }
+    .block.tag-read::before { background: var(--read); }
+    .block.tag-social::before { background: var(--social); }
+    .block.tag-rec::before { background: var(--rec); }
+    .block:active { transform: scale(0.98); }
+    .block.done { opacity: 0.35; }
+    .block.done .btitle { text-decoration: line-through; }
+    .block-left { display: flex; flex-direction: column; align-items: flex-end; min-width: 70px; gap: 4px; padding-top: 1px; }
+    .tlabel { font-size: 11px; color: var(--text3); line-height: 1.4; text-align: right; }
+    .tag-pill { font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
+    .tag-skill .tag-pill { background: #3B82F622; color: #60A5FA; }
+    .tag-bincom .tag-pill { background: #8B5CF622; color: #A78BFA; }
+    .tag-cashout .tag-pill { background: #F59E0B22; color: #FCD34D; }
+    .tag-faith .tag-pill { background: #10B98122; color: #34D399; }
+    .tag-rest .tag-pill { background: #6B728022; color: #9CA3AF; }
+    .tag-habit .tag-pill { background: #F9731622; color: #FB923C; }
+    .tag-read .tag-pill { background: #EC489922; color: #F472B6; }
+    .tag-social .tag-pill { background: #06B6D422; color: #22D3EE; }
+    .tag-rec .tag-pill { background: #84CC1622; color: #A3E635; }
+    .bbody { flex: 1; }
+    .btitle { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; line-height: 1.3; }
+    .bnote { font-size: 12px; color: var(--text2); line-height: 1.5; font-weight: 300; }
+    .check-icon { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; transition: all 0.2s; margin-top: 1px; }
+    .block.done .check-icon { background: var(--accent); border-color: var(--accent); }
+    .check-icon svg { width: 12px; height: 12px; stroke: #0D0D0D; stroke-width: 2.5; fill: none; display: none; }
+    .block.done .check-icon svg { display: block; }
+
+    /* BOTTOM BAR */
+    .bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; padding: 12px 20px 28px; background: linear-gradient(to top, var(--bg) 70%, transparent); display: flex; gap: 10px; z-index: 10; }
+    .reset-btn { flex: 1; padding: 13px; border-radius: 12px; border: 1px solid var(--border2); background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.2s; }
+    .reset-btn:hover { border-color: var(--text3); color: var(--text); }
+    .notify-btn { flex: 1; padding: 13px; border-radius: 12px; border: 1px solid var(--accent); background: var(--accent); font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: #0D0D0D; cursor: pointer; transition: all 0.2s; }
+    .notify-btn.on { background: transparent; color: var(--accent); }
+    .notify-btn:hover { opacity: 0.85; }
+
+    /* SUPABASE SETUP MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; align-items: flex-end; justify-content: center; padding: 0 0 20px; }
+    .modal-overlay.hidden { display: none; }
+    .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 20px 20px 16px 16px; padding: 24px 20px; width: 100%; max-width: 480px; }
+    .modal h2 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+    .modal p { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+    .modal input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; margin-bottom: 10px; outline: none; }
+    .modal input:focus { border-color: var(--accent); }
+    .modal input::placeholder { color: var(--text3); }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-save { flex: 1; padding: 13px; border-radius: 10px; background: var(--accent); border: none; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #0D0D0D; cursor: pointer; }
+    .modal-skip { flex: 1; padding: 13px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border2); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text2); cursor: pointer; }
+    .modal-steps { font-size: 12px; color: var(--text3); margin-bottom: 16px; line-height: 1.8; }
+    .modal-steps a { color: var(--accent); text-decoration: none; }
+    .modal-steps code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-title">Rio<span>'s</span> Week</div>
+      <button class="sync-btn" onclick="openSyncModal()">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-label">Sync</span>
+      </button>
+    </div>
+    <div class="date-line" id="date-line"></div>
+  </div>
+
+  <div class="day-tabs" id="day-tabs"></div>
+
+  <div class="progress-row">
+    <div class="progress-meta">
+      <span class="progress-label" id="prog-label">0 of 0 blocks done</span>
+      <span class="progress-pct" id="prog-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="day-notice" id="day-notice"></div>
+
+  <div class="schedule-scroll" id="schedule-body"></div>
+
+  <div class="bottom-bar">
+    <button class="reset-btn" onclick="resetDay()">↺ Reset Day</button>
+    <button class="notify-btn" id="notify-btn" onclick="toggleNotifications()">Enable Alerts</button>
+  </div>
+</div>
+
+<!-- Supabase Modal -->
+<div class="modal-overlay hidden" id="sync-modal">
+  <div class="modal">
+    <h2>☁️ Cloud Sync Setup</h2>
+    <p>Connect a free Supabase database so your checkoffs sync between your phone and laptop in real time.</p>
+    <div class="modal-steps">
+      1. Go to <a href="https://supabase.com" target="_blank">supabase.com</a> → New project (free)<br>
+      2. Go to <strong>SQL Editor</strong> → paste and run:<br>
+      <code>create table schedule (id text primary key, checked jsonb, updated_at timestamptz default now());</code><br>
+      3. Go to <strong>Settings → API</strong> → copy your URL + anon key below
+    </div>
+    <input type="text" id="sb-url" placeholder="https://xxxx.supabase.co" />
+    <input type="text" id="sb-key" placeholder="eyJh... (anon public key)" />
+    <div class="modal-btns">
+      <button class="modal-skip" onclick="closeSyncModal()">Skip for now</button>
+      <button class="modal-save" onclick="saveSupabase()">Connect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── SCHEDULE DATA ───────────────────────────────────────────────
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_NAMES  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+const WEEKDAY = [
+  {time:'7:00–7:45',  title:'Morning chores',          note:'Clean up, wash, tidy your space. Start the day with order.',                                          tag:'habit',   period:'morning'},
+  {time:'7:45–8:15',  title:'Breakfast + no-phone start', note:'Eat properly. Hold off on the phone until after breakfast.',                                       tag:'habit',   period:'morning'},
+  {time:'8:15–10:00', title:'Skill dev — block 1',      note:'Primary learning: tech stack, tutorials, or Bincom prep. Hardest focus first.',                      tag:'skill',   period:'morning'},
+  {time:'10:00–10:15',title:'Short break',              note:'Stand, stretch, step outside briefly.',                                                               tag:'rest',    period:'morning'},
+  {time:'10:15–12:00',title:'Skill dev — block 2',      note:'Continue or switch topic. Build something, don\'t just consume.',                                    tag:'skill',   period:'morning'},
+  {time:'12:00–1:00', title:'Lunch + real rest',        note:'Away from screens for at least 30 min. Non-negotiable.',                                             tag:'rest',    period:'afternoon'},
+  {time:'1:00–2:45',  title:'Cashout Project',          note:'Work on your academic comeback fund. Dedicated, uninterrupted.',                                     tag:'cashout', period:'afternoon'},
+  {time:'2:45–3:00',  title:'Prep + travel buffer',     note:'Wrap up and get ready for Bincom.',                                                                  tag:'rest',    period:'afternoon'},
+  {time:'3:00–5:00',  title:'Bincom class',             note:'Attend fully. Take notes. Ask questions.',                                                           tag:'bincom',  period:'afternoon'},
+  {time:'5:00–6:00',  title:'Decompress + dinner',      note:'Wind down from class. Eat well.',                                                                    tag:'rest',    period:'evening'},
+  {time:'6:00–6:30',  title:'Daily reading',            note:'30 min minimum. Books, DC Comics, anything long-form.',                                              tag:'read',    period:'evening'},
+  {time:'6:30–7:15',  title:'Communication block',      note:'WhatsApp, texts — Reji and your crew. Catch up properly.',                                          tag:'social',  period:'evening'},
+  {time:'7:15–9:30',  title:'Recreation',               note:'TV, movies, gaming, or any leisure. Earned time — enjoy it fully.',                                 tag:'rec',     period:'evening'},
+  {time:'9:30–10:30', title:'Wind-down',                note:'Lower the energy. Review tomorrow\'s top 3 tasks.',                                                 tag:'habit',   period:'evening'},
+  {time:'10:30–11:00',title:'Sleep prep',               note:'Phone down. Lights out by 11pm.',                                                                    tag:'habit',   period:'evening'},
+];
+
+const WEDNESDAY = [
+  {time:'7:00–7:45',  title:'Morning chores',           note:'Clean up, wash, tidy your space.',                                                                   tag:'habit',   period:'morning'},
+  {time:'7:45–8:15',  title:'Breakfast + no-phone start', note:'Eat properly before the day begins.',                                                              tag:'habit',   period:'morning'},
+  {time:'8:15–10:00', title:'Skill dev — block 1',      note:'Primary learning block. Full focus.',                                                                tag:'skill',   period:'morning'},
+  {time:'10:00–10:15',title:'Short break',              note:'Stand, stretch, step outside.',                                                                      tag:'rest',    period:'morning'},
+  {time:'10:15–12:00',title:'Skill dev — block 2',      note:'Continue or switch topic.',                                                                          tag:'skill',   period:'morning'},
+  {time:'12:00–1:00', title:'Lunch + real rest',        note:'Away from screens. Recharge.',                                                                       tag:'rest',    period:'afternoon'},
+  {time:'1:00–2:45',  title:'Cashout Project',          note:'Work the plan. Progress every day.',                                                                 tag:'cashout', period:'afternoon'},
+  {time:'2:45–3:00',  title:'Prep buffer',              note:'Wrap up and get ready for Bincom.',                                                                  tag:'rest',    period:'afternoon'},
+  {time:'3:00–5:00',  title:'Bincom class',             note:'Attend fully.',                                                                                      tag:'bincom',  period:'afternoon'},
+  {time:'5:00–7:00',  title:'Religious meeting',        note:'Faith commitment. Be fully present.',                                                                tag:'faith',   period:'evening'},
+  {time:'7:00–7:45',  title:'Dinner + decompress',      note:'Eat and reset after a full day.',                                                                    tag:'rest',    period:'evening'},
+  {time:'7:45–8:15',  title:'Daily reading',            note:'30 min. Even on a packed day — keep the habit.',                                                    tag:'read',    period:'evening'},
+  {time:'8:15–9:00',  title:'Communication block',      note:'Catch up on messages. Stay in touch.',                                                               tag:'social',  period:'evening'},
+  {time:'9:00–10:00', title:'Light recreation',         note:'Something low-effort — a show, gaming, DC. You\'ve earned it.',                                    tag:'rec',     period:'evening'},
+  {time:'10:00–11:00',title:'Wind-down + sleep prep',   note:'Review tomorrow. Phone down. Lights out.',                                                           tag:'habit',   period:'evening'},
+];
+
+const SATURDAY = [
+  {time:'8:00–12:00', title:'Religious activities',     note:'Church/service. Protected — nothing moves this.',                                                    tag:'faith',   period:'morning'},
+  {time:'12:00–1:00', title:'Lunch + recovery',         note:'Eat well and decompress after service.',                                                             tag:'rest',    period:'afternoon'},
+  {time:'1:00–3:00',  title:'Skill development',        note:'Weekend learning. Reinforce what you covered during the week.',                                      tag:'skill',   period:'afternoon'},
+  {time:'3:00–4:30',  title:'Cashout Project',          note:'Dedicated work session. Keep momentum.',                                                             tag:'cashout', period:'afternoon'},
+  {time:'4:30–5:00',  title:'Break + snack',            note:'Rest before the evening.',                                                                           tag:'rest',    period:'afternoon'},
+  {time:'5:00–5:30',  title:'Daily reading',            note:'30 min. Every day.',                                                                                 tag:'read',    period:'evening'},
+  {time:'5:30–6:30',  title:'Communication + social',   note:'Reach out, plan hangouts, or just catch up.',                                                       tag:'social',  period:'evening'},
+  {time:'6:30–7:00',  title:'Dinner',                   note:'Eat properly.',                                                                                      tag:'rest',    period:'evening'},
+  {time:'7:00–9:30',  title:'Movie / recreation block', note:'Watch a movie or hang out. If it\'s a sequel/multi-part you want to continue, run the second too.', tag:'rec',     period:'evening'},
+  {time:'9:30–10:30', title:'Wind-down',                note:'Low energy. Review Sunday plan.',                                                                    tag:'habit',   period:'evening'},
+  {time:'10:30–11:00',title:'Sleep prep',               note:'Phone down. Lights out.',                                                                            tag:'habit',   period:'evening'},
+];
+
+const SUNDAY = [
+  {time:'8:00–12:00', title:'Religious activities',     note:'Church/service. Protected block.',                                                                   tag:'faith',   period:'morning'},
+  {time:'12:00–1:00', title:'Lunch + recovery',         note:'Eat and rest after service.',                                                                        tag:'rest',    period:'afternoon'},
+  {time:'1:00–2:00',  title:'Daily reading',            note:'Extended Sunday reading. Make it a ritual.',                                                         tag:'read',    period:'afternoon'},
+  {time:'2:00–4:00',  title:'Movie / hangout / recreation', note:'A full movie or social outing. Proper rest — not filler.',                                      tag:'rec',     period:'afternoon'},
+  {time:'4:00–6:00',  title:'Cashout Project',          note:'Weekend session. Set yourself up for the week.',                                                     tag:'cashout', period:'afternoon'},
+  {time:'6:00–7:00',  title:'Dinner + debrief',         note:'Eat and reflect on the week.',                                                                       tag:'rest',    period:'evening'},
+  {time:'7:00–7:30',  title:'Communication block',      note:'Messages and calls you owe people.',                                                                 tag:'social',  period:'evening'},
+  {time:'7:30–9:00',  title:'Week prep',                note:'Set top 3 priorities for Monday. Review goals. Light planning.',                                    tag:'habit',   period:'evening'},
+  {time:'9:00–10:00', title:'Skill dev — light review', note:'Review notes or a short tutorial. No heavy new material Sunday nights.',                            tag:'skill',   period:'evening'},
+  {time:'10:00–11:00',title:'Wind-down + sleep prep',   note:'Phone down early. Full week ahead.',                                                                 tag:'habit',   period:'evening'},
+];
+
+// day index: 0=Mon...4=Fri, 5=Sat, 6=Sun
+function getSchedule(d) {
+  if (d === 2) return WEDNESDAY;
+  if (d === 5) return SATURDAY;
+  if (d === 6) return SUNDAY;
+  return WEEKDAY;
+}
+
+const NOTICES = {
+  2: '⛪ Wednesday — religious meeting at 5:00 PM. Schedule adjusted.',
+  5: '🕊️ Saturday — religious activities 8am–12pm. Protected.',
+  6: '🕊️ Sunday — religious activities 8am–12pm. Week prep in the evening.',
+};
+
+// ─── STATE ───────────────────────────────────────────────────────
+let currentDay = 0; // 0=Mon
+let checked = {};
+let notificationsOn = false;
+let sbUrl = '', sbKey = '';
+
+function init() {
+  // load saved config
+  sbUrl = localStorage.getItem('rio_sb_url') || '';
+  sbKey = localStorage.getItem('rio_sb_key') || '';
+  notificationsOn = localStorage.getItem('rio_notif') === 'true';
+
+  // detect today's day-of-week, map to our 0=Mon index
+  const jsDay = new Date().getDay(); // 0=Sun
+  const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
+  currentDay = todayIdx;
+
+  // date line
+  const opts = { weekday:'long', month:'long', day:'numeric' };
+  document.getElementById('date-line').textContent = new Date().toLocaleDateString('en-GB', opts);
+
+  updateSyncUI();
+  renderTabs();
+  loadDay(currentDay);
+  updateNotifyBtn();
+  if (notificationsOn) scheduleNotifications();
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────
+function renderTabs() {
+  const jsDay = new Date().getDay();
+  const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
+  const now = new Date();
+  const container = document.getElementById('day-tabs');
+  container.innerHTML = DAY_NAMES.map((name, i) => {
+    const date = new Date(now);
+    date.setDate(now.getDate() - todayIdx + i);
+    const num = date.getDate();
+    const isToday = i === todayIdx;
+    const isActive = i === currentDay;
+    return `<div class="day-tab ${isActive?'active':''} ${isToday?'today':''}" onclick="switchDay(${i})">
+      <span class="day-name">${name.slice(0,3)}</span>
+      <span class="day-num">${num}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── LOAD / RENDER DAY ───────────────────────────────────────────
+async function loadDay(d) {
+  checked = {};
+  // try cloud first, fall back to local
+  if (sbUrl && sbKey) {
+    try {
+      const res = await fetch(`${sbUrl}/rest/v1/schedule?id=eq.day_${d}&select=checked`, {
+        headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}` }
+      });
+      const data = await res.json();
+      if (data && data[0]) checked = data[0].checked || {};
+    } catch(e) {
+      checked = JSON.parse(localStorage.getItem(`rio_day_${d}`) || '{}');
+    }
+  } else {
+    checked = JSON.parse(localStorage.getItem(`rio_day_${d}`) || '{}');
+  }
+  renderSchedule();
+}
+
+function renderSchedule() {
+  const sched = getSchedule(currentDay);
+  const body = document.getElementById('schedule-body');
+
+  // notice
+  const notice = document.getElementById('day-notice');
+  if (NOTICES[currentDay]) {
+    notice.textContent = NOTICES[currentDay];
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+
+  const periods = {};
+  sched.forEach((b, i) => {
+    if (!periods[b.period]) periods[b.period] = [];
+    periods[b.period].push({...b, i});
+  });
+
+  let html = '';
+  for (const [period, blocks] of Object.entries(periods)) {
+    html += `<div class="section-label">${period}</div>`;
+    for (const b of blocks) {
+      const done = checked[b.i] ? 'done' : '';
+      html += `<div class="block tag-${b.tag} ${done}" onclick="toggle(${b.i})">
+        <div class="block-left">
+          <span class="tlabel">${b.time}</span>
+          <span class="tag-pill">${b.tag}</span>
+        </div>
+        <div class="bbody">
+          <div class="btitle">${b.title}</div>
+          <div class="bnote">${b.note}</div>
+        </div>
+        <div class="check-icon">
+          <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+        </div>
+      </div>`;
+    }
+  }
+  body.innerHTML = html;
+  updateProgress();
+}
+
+// ─── TOGGLE ──────────────────────────────────────────────────────
+async function toggle(i) {
+  checked[i] = !checked[i];
+  saveLocal();
+  if (sbUrl && sbKey) await saveCloud();
+  renderSchedule();
+}
+
+function saveLocal() {
+  localStorage.setItem(`rio_day_${currentDay}`, JSON.stringify(checked));
+}
+
+async function saveCloud() {
+  setSyncState('syncing');
+  try {
+    await fetch(`${sbUrl}/rest/v1/schedule`, {
+      method: 'POST',
+      headers: {
+        apikey: sbKey,
+        Authorization: `Bearer ${sbKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ id: `day_${currentDay}`, checked, updated_at: new Date().toISOString() })
+    });
+    setSyncState('synced');
+  } catch(e) {
+    setSyncState('offline');
+  }
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────────
+function updateProgress() {
+  const total = getSchedule(currentDay).length;
+  const done = Object.values(checked).filter(Boolean).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('prog-label').textContent = `${done} of ${total} blocks done`;
+  document.getElementById('prog-pct').textContent = `${pct}%`;
+  document.getElementById('prog-fill').style.width = `${pct}%`;
+}
+
+// ─── SWITCH DAY ──────────────────────────────────────────────────
+function switchDay(d) {
+  currentDay = d;
+  renderTabs();
+  loadDay(d);
+}
+
+function resetDay() {
+  checked = {};
+  saveLocal();
+  if (sbUrl && sbKey) saveCloud();
+  renderSchedule();
+}
+
+// ─── SYNC UI ─────────────────────────────────────────────────────
+function setSyncState(state) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot';
+  if (state === 'synced') { dot.classList.add('synced'); lbl.textContent = 'Synced'; }
+  else if (state === 'syncing') { dot.classList.add('syncing'); lbl.textContent = 'Syncing…'; }
+  else if (state === 'connected') { dot.classList.add('synced'); lbl.textContent = 'Connected'; }
+  else { lbl.textContent = 'Sync'; }
+}
+
+function updateSyncUI() {
+  if (sbUrl && sbKey) setSyncState('connected');
+}
+
+function openSyncModal() {
+  document.getElementById('sb-url').value = sbUrl;
+  document.getElementById('sb-key').value = sbKey;
+  document.getElementById('sync-modal').classList.remove('hidden');
+}
+
+function closeSyncModal() {
+  document.getElementById('sync-modal').classList.add('hidden');
+}
+
+function saveSupabase() {
+  const url = document.getElementById('sb-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('sb-key').value.trim();
+  if (!url || !key) { alert('Please enter both the URL and key.'); return; }
+  sbUrl = url; sbKey = key;
+  localStorage.setItem('rio_sb_url', sbUrl);
+  localStorage.setItem('rio_sb_key', sbKey);
+  closeSyncModal();
+  setSyncState('connected');
+  saveCloud();
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────
+async function toggleNotifications() {
+  if (!('Notification' in window)) { alert('Notifications not supported on this browser.'); return; }
+  if (!notificationsOn) {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      notificationsOn = true;
+      localStorage.setItem('rio_notif', 'true');
+      scheduleNotifications();
+    }
+  } else {
+    notificationsOn = false;
+    localStorage.setItem('rio_notif', 'false');
+  }
+  updateNotifyBtn();
+}
+
+function updateNotifyBtn() {
+  const btn = document.getElementById('notify-btn');
+  if (notificationsOn) { btn.textContent = '🔔 Alerts On'; btn.classList.add('on'); }
+  else { btn.textContent = 'Enable Alerts'; btn.classList.remove('on'); }
+}
+
+function scheduleNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const jsDay = new Date().getDay();
+  const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
+  const sched = getSchedule(todayIdx);
+  const now = new Date();
+
+  sched.forEach(block => {
+    const startTime = block.time.split('–')[0].trim();
+    const [h, m] = startTime.split(':').map(Number);
+    const blockTime = new Date(now);
+    blockTime.setHours(h, m, 0, 0);
+    // notify 5 min before
+    const notifTime = new Date(blockTime.getTime() - 5 * 60 * 1000);
+    const delay = notifTime.getTime() - now.getTime();
+    if (delay > 0) {
+      setTimeout(() => {
+        new Notification(`⏰ Up next: ${block.title}`, {
+          body: block.note,
+          icon: 'icon-192.png',
+          badge: 'icon-192.png',
+          tag: `rio-${block.title}`
+        });
+      }, delay);
+    }
+  });
+}
+
+// ─── SERVICE WORKER ──────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+init();
+</script>
+</body>
+</html>
